@@ -13,7 +13,7 @@ type mongoOptions struct {
 	collection    string
 	database_url  string
 	database_name string
-	Model         interface{}
+	model         interface{}
 }
 
 func NewMongoConfig() *mongoOptions {
@@ -37,6 +37,11 @@ func (mo *mongoOptions) SetConnectionUrl(url string) *mongoOptions {
 // SetDatabaseName set the database name used by the current connection
 func (mo *mongoOptions) SetDatabaseName(name string) *mongoOptions {
 	mo.database_name = name
+	return mo
+}
+
+func (mo *mongoOptions) SetModel(model interface{}) *mongoOptions {
+	mo.model = model
 	return mo
 }
 
