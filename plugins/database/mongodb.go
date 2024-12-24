@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/neghi14/starter"
+	model "github.com/neghi14/starter/modeller"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -13,7 +15,6 @@ type mongoOptions struct {
 	collection    string
 	database_url  string
 	database_name string
-	model         interface{}
 }
 
 func NewMongoConfig() *mongoOptions {
@@ -40,11 +41,6 @@ func (mo *mongoOptions) SetDatabaseName(name string) *mongoOptions {
 	return mo
 }
 
-func (mo *mongoOptions) SetModel(model interface{}) *mongoOptions {
-	mo.model = model
-	return mo
-}
-
 func Mongo(cfg *mongoOptions) (*starter.DatabaseAdapter, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -56,21 +52,39 @@ func Mongo(cfg *mongoOptions) (*starter.DatabaseAdapter, error) {
 		return nil, err
 	}
 	db := client.Database(cfg.database_name).Collection(cfg.collection)
+	mo := model.New()
 	return &starter.DatabaseAdapter{
 		Name: "mongo-database",
 		FindOne: func(ctx context.Context, filter, result interface{}) error {
+			var data bson.D
 			res := db.FindOne(ctx, filter)
-			return res.Decode(result)
+			if err := res.Decode(&data); err != nil {
+				return err
+			}
+			model, _ := mo.ConvertFromBson(data)
+			return mo.ParseToStruct(result, model)
 		},
 		Find: func(ctx context.Context, filter, result interface{}) error {
+			var data []bson.D
 			res, err := db.Find(ctx, filter)
 			if err != nil {
 				return err
 			}
-			return res.All(ctx, result)
+			if err := res.All(ctx, &data); err != nil {
+				return err
+			}
+			return nil
 		},
 		Save: func(ctx context.Context, data interface{}) error {
-			_, err := db.InsertOne(ctx, data)
+			res, err := mo.ParseToKeyValue(data)
+			if err != nil {
+				return err
+			}
+			input, err := mo.ConvertToBson(res)
+			if err != nil {
+				return err
+			}
+			_, err = db.InsertOne(ctx, input)
 			if err != nil {
 				return err
 			}

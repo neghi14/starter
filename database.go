@@ -1,6 +1,8 @@
 package starter
 
-import "context"
+import (
+	"context"
+)
 
 type DatabaseAdapter struct {
 	Name      string
@@ -14,6 +16,7 @@ type DatabaseAdapter struct {
 	Disconnet func(ctx context.Context) error
 }
 
-type DatabaseAdapterOptions struct{}
+type DatabaseAdapterOptions struct {
+}
 
 type DatabaseConfig func(*DatabaseAdapterOptions)

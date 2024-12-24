@@ -29,22 +29,20 @@ type model struct {
 	defaultField string
 }
 
+type E struct {
+	Key   string
+	Value interface{}
+}
+type M []E
+
 type Model struct{}
 
 func New() *Model {
 	return &Model{}
 }
 
-func (m *Model) Extract(d interface{}) ([]byte, error) {
-	_, err := m.parse(d)
-	if err != nil {
-		return nil, err
-	}
-	return nil, nil
-}
-
-func (m *Model) ExtractForMongo(d interface{}) (bson.D, error) {
-	var res bson.D
+func (m *Model) ParseToKeyValue(d interface{}) (M, error) {
+	var res M
 	data, err := m.parse(d)
 	if err != nil {
 		return nil, err
@@ -56,9 +54,49 @@ func (m *Model) ExtractForMongo(d interface{}) (bson.D, error) {
 		} else {
 			field = dd.mongoField
 		}
-		res = append(res, bson.E{Key: field, Value: dd.fieldValue.String()})
+		var val interface{}
+		switch dd.fieldValue.Kind() {
+		case reflect.Int:
+			val = int(dd.fieldValue.Int())
+		case reflect.Int8:
+			val = int8(dd.fieldValue.Int())
+		case reflect.Int16:
+			val = int16(dd.fieldValue.Int())
+		case reflect.Int32:
+			val = int32(dd.fieldValue.Int())
+		case reflect.Int64:
+			val = int64(dd.fieldValue.Int())
+		case reflect.String:
+			val = dd.fieldValue.String()
+		case reflect.Float32:
+			val = float32(dd.fieldValue.Float())
+		case reflect.Float64:
+			val = float64(dd.fieldValue.Float())
+		default:
+			return nil, errors.New("unsupported field type")
+		}
+		res = append(res, E{Key: field, Value: val})
 	}
 	return res, nil
+}
+
+func (m *Model) ParseToStruct(obj interface{}, data M) error {
+
+	mo, err := m.parse(obj)
+	if err != nil {
+		return err
+	}
+	for _, mod := range mo {
+		if mod.fieldValue.IsValid() && mod.fieldValue.CanSet() {
+			for _, re := range data {
+				if re.Key == mod.defaultField || re.Key == mod.mongoField {
+					mod.fieldValue.Set(reflect.ValueOf(re.Value))
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func (m *Model) parse(d interface{}) ([]*model, error) {
@@ -95,5 +133,24 @@ func (m *Model) parse(d interface{}) ([]*model, error) {
 		res = append(res, m)
 	}
 
+	return res, nil
+}
+
+func (m *Model) ConvertToBson(data M) (bson.D, error) {
+	var res bson.D
+
+	for _, d := range data {
+		res = append(res, bson.E{Key: d.Key, Value: d.Value})
+	}
+
+	return res, nil
+}
+
+func (m *Model) ConvertFromBson(data bson.D) (M, error) {
+	var res M
+
+	for _, d := range data {
+		res = append(res, E{Key: d.Key, Value: d.Value})
+	}
 	return res, nil
 }
