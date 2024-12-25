@@ -19,6 +19,9 @@ const (
 
 	// tagAttributes name of model attributes or list of attributes
 	tagAttributes = "attr"
+
+	// mongoIDField is the _id field for mongodb
+	mongoIDField = "_id"
 )
 
 type model struct {
@@ -75,7 +78,11 @@ func (m *Model) ParseToKeyValue(d interface{}) (M, error) {
 		default:
 			return nil, errors.New("unsupported field type")
 		}
-		res = append(res, E{Key: field, Value: val})
+
+		if !dd.fieldValue.IsZero() {
+			res = append(res, E{Key: field, Value: val})
+		}
+
 	}
 	return res, nil
 }
@@ -140,6 +147,13 @@ func (m *Model) ConvertToBson(data M) (bson.D, error) {
 	var res bson.D
 
 	for _, d := range data {
+		if d.Key == mongoIDField && d.Key != "" {
+			id, err := bson.ObjectIDFromHex(d.Value.(string))
+			if err != nil {
+				return nil, err
+			}
+			d.Value = id
+		}
 		res = append(res, bson.E{Key: d.Key, Value: d.Value})
 	}
 
@@ -150,6 +164,13 @@ func (m *Model) ConvertFromBson(data bson.D) (M, error) {
 	var res M
 
 	for _, d := range data {
+		if d.Key == mongoIDField {
+			id, ok := d.Value.(bson.ObjectID)
+			if !ok {
+				return nil, errors.New("error validating primitive ID")
+			}
+			d.Value = id.Hex()
+		}
 		res = append(res, E{Key: d.Key, Value: d.Value})
 	}
 	return res, nil
