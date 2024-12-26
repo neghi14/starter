@@ -42,7 +42,7 @@ func (mo *mongoConf) SetDatabaseName(name string) *mongoConf {
 	return mo
 }
 
-func New(cfg *mongoConf) (*database.DatabaseAdapter, error) {
+func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Model], error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -56,9 +56,9 @@ func New(cfg *mongoConf) (*database.DatabaseAdapter, error) {
 	db := client.Database(cfg.database_name).Collection(cfg.collection)
 
 	db.Indexes().CreateMany(ctx, []mongo.IndexModel{})
-	return &database.DatabaseAdapter{
+	return &database.DatabaseAdapter[Model]{
 		Name: "mongo-database",
-		FindOne: func(ctx context.Context, filter database.Filter, result interface{}) error {
+		FindOne: func(ctx context.Context, filter database.Filter, result Model) error {
 			var data bson.D
 			var fil bson.D
 
@@ -74,7 +74,7 @@ func New(cfg *mongoConf) (*database.DatabaseAdapter, error) {
 			model, _ := cfg.parser.ConvertFromBson(data)
 			return cfg.parser.ParseToStruct(result, model)
 		},
-		Find: func(ctx context.Context, filter database.Filter, result []interface{}) error {
+		Find: func(ctx context.Context, filter database.Filter, result []Model) error {
 			var data []bson.D
 			var fil bson.D
 
@@ -125,7 +125,7 @@ func New(cfg *mongoConf) (*database.DatabaseAdapter, error) {
 
 			return nil
 		},
-		UpdateOne: func(ctx context.Context, filter database.Filter, update interface{}) error {
+		UpdateOne: func(ctx context.Context, filter database.Filter, update Model) error {
 			var fil bson.D
 
 			for _, f := range filter.Param {
@@ -145,7 +145,7 @@ func New(cfg *mongoConf) (*database.DatabaseAdapter, error) {
 			}
 			return nil
 		},
-		Update: func(ctx context.Context, filter database.Filter, update interface{}) error {
+		Update: func(ctx context.Context, filter database.Filter, update []Model) error {
 			parsed, err := cfg.parser.ParseToKeyValue(update)
 			if err != nil {
 				return err

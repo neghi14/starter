@@ -2,13 +2,13 @@ package database
 
 import "context"
 
-type DatabaseAdapter struct {
+type DatabaseAdapter[T any] struct {
 	Name      string
-	FindOne   func(ctx context.Context, filter Filter, result interface{}) error
-	Find      func(ctx context.Context, filter Filter, result []interface{}) error
+	FindOne   func(ctx context.Context, filter Filter, result T) error
+	Find      func(ctx context.Context, filter Filter, result []T) error
 	Save      func(ctx context.Context, data interface{}) error
-	UpdateOne func(ctx context.Context, filter Filter, update interface{}) error
-	Update    func(ctx context.Context, filter Filter, update interface{}) error
+	UpdateOne func(ctx context.Context, filter Filter, update T) error
+	Update    func(ctx context.Context, filter Filter, update []T) error
 	DeleteOne func(ctx context.Context, filter Filter) error
 	Delete    func(ctx context.Context, filter Filter) error
 	Disconnet func(ctx context.Context) error
