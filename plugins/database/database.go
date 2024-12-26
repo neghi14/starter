@@ -1,27 +1,31 @@
-package model
+package database
 
 import (
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+var db sync.Once
+var db_instance *Model
+
 // Supported Tags
 const (
-	// tagMongo name of mongo variable or list of names
-	tagMongo = "mongo"
-
 	// tagDefault name of model variable or list of names
-	tagDefault = "model"
+	tagDefault = "db"
 
 	// tagAttributes name of model attributes or list of attributes
 	tagAttributes = "attr"
 
 	// mongoIDField is the _id field for mongodb
 	mongoIDField = "_id"
+
+	attrRequired = "required"
+	attrUnique   = "unique"
 )
 
 type model struct {
@@ -36,15 +40,26 @@ type E struct {
 	Key   string
 	Value interface{}
 }
+
+type attrBody struct {
+	key      string
+	unique   bool
+	required bool
+}
+
 type M []E
 
 type Model struct{}
 
-func New() *Model {
-	return &Model{}
+func new() *Model {
+	db.Do(func() {
+		db_instance = &Model{}
+	})
+
+	return db_instance
 }
 
-func (m *Model) ParseToKeyValue(d interface{}) (M, error) {
+func (m *Model) parseToKeyValue(d interface{}) (M, error) {
 	var res M
 	data, err := m.parse(d)
 	if err != nil {
@@ -87,7 +102,7 @@ func (m *Model) ParseToKeyValue(d interface{}) (M, error) {
 	return res, nil
 }
 
-func (m *Model) ParseToStruct(obj interface{}, data M) error {
+func (m *Model) parseToStruct(obj interface{}, data M) error {
 
 	mo, err := m.parse(obj)
 	if err != nil {
@@ -130,9 +145,6 @@ func (m *Model) parse(d interface{}) ([]*model, error) {
 		if def, ok := fType.Tag.Lookup(tagDefault); ok {
 			m.defaultField = def
 		}
-		if def, ok := fType.Tag.Lookup(tagMongo); ok {
-			m.mongoField = def
-		}
 		if def, ok := fType.Tag.Lookup(tagAttributes); ok {
 			attr := strings.Split(def, ",")
 			m.attributes = append(m.attributes, attr...)
@@ -174,4 +186,8 @@ func (m *Model) ConvertFromBson(data bson.D) (M, error) {
 		res = append(res, E{Key: d.Key, Value: d.Value})
 	}
 	return res, nil
+}
+
+func (m *Model) getAttr() error {
+	return nil
 }

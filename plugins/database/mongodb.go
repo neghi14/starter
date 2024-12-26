@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/neghi14/starter"
-	model "github.com/neghi14/starter/modeller"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -42,6 +41,7 @@ func (mo *mongoOptions) SetDatabaseName(name string) *mongoOptions {
 }
 
 func Mongo(cfg *mongoOptions) (*starter.DatabaseAdapter, error) {
+	mo := new()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	client, err := mongo.Connect(options.Client().ApplyURI(cfg.database_url))
@@ -52,7 +52,8 @@ func Mongo(cfg *mongoOptions) (*starter.DatabaseAdapter, error) {
 		return nil, err
 	}
 	db := client.Database(cfg.database_name).Collection(cfg.collection)
-	mo := model.New()
+	mo.getAttr()
+	db.Indexes().CreateMany(ctx, []mongo.IndexModel{})
 	return &starter.DatabaseAdapter{
 		Name: "mongo-database",
 		FindOne: func(ctx context.Context, filter, result interface{}) error {
@@ -62,7 +63,7 @@ func Mongo(cfg *mongoOptions) (*starter.DatabaseAdapter, error) {
 				return err
 			}
 			model, _ := mo.ConvertFromBson(data)
-			return mo.ParseToStruct(result, model)
+			return mo.parseToStruct(result, model)
 		},
 		Find: func(ctx context.Context, filter, result interface{}) error {
 			var data []bson.D
@@ -76,7 +77,7 @@ func Mongo(cfg *mongoOptions) (*starter.DatabaseAdapter, error) {
 			return nil
 		},
 		Save: func(ctx context.Context, data interface{}) error {
-			res, err := mo.ParseToKeyValue(data)
+			res, err := mo.parseToKeyValue(data)
 			if err != nil {
 				return err
 			}
