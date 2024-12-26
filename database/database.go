@@ -4,8 +4,8 @@ import "context"
 
 type DatabaseAdapter[T any] struct {
 	Name      string
-	FindOne   func(ctx context.Context, filter Filter, result T) error
-	Find      func(ctx context.Context, filter Filter, result []T) error
+	FindOne   func(ctx context.Context, filter Filter) (*T, error)
+	Find      func(ctx context.Context, filter Filter) ([]*T, error)
 	Save      func(ctx context.Context, data interface{}) error
 	UpdateOne func(ctx context.Context, filter Filter, update T) error
 	Update    func(ctx context.Context, filter Filter, update []T) error

@@ -58,7 +58,8 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 	db.Indexes().CreateMany(ctx, []mongo.IndexModel{})
 	return &database.DatabaseAdapter[Model]{
 		Name: "mongo-database",
-		FindOne: func(ctx context.Context, filter database.Filter, result Model) error {
+		FindOne: func(ctx context.Context, filter database.Filter) (*Model, error) {
+			var result Model
 			var data bson.D
 			var fil bson.D
 
@@ -68,15 +69,20 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 
 			res := db.FindOne(ctx, fil)
 			if err := res.Decode(&data); err != nil {
-				return err
+				return nil, err
 			}
 
 			model, _ := cfg.parser.ConvertFromBson(data)
-			return cfg.parser.ParseToStruct(result, model)
+			err = cfg.parser.ParseToStruct(&result, model)
+			if err != nil {
+				return nil, err
+			}
+			return &result, nil
 		},
-		Find: func(ctx context.Context, filter database.Filter, result []Model) error {
+		Find: func(ctx context.Context, filter database.Filter) ([]*Model, error) {
 			var data []bson.D
 			var fil bson.D
+			var result []*Model
 
 			for _, f := range filter.Param {
 				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
@@ -87,27 +93,29 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 				SetLimit(filter.Limit).
 				SetSkip(filter.Skip))
 			if err != nil {
-				return err
+				return nil, err
 			}
 			defer res.Close(ctx)
 			for res.Next(ctx) {
 				single := bson.D{}
 				if err := res.Decode(&single); err != nil {
-					return err
+					return nil, err
 				}
 				data = append(data, single)
 			}
-			for i, d := range data {
+			for _, d := range data {
 				b, err := cfg.parser.ConvertFromBson(d)
 				if err != nil {
-					return err
+					return nil, err
 				}
-				err = cfg.parser.ParseToStruct(result[i], b)
+				var single *Model
+				err = cfg.parser.ParseToStruct(&single, b)
 				if err != nil {
-					return err
+					return nil, err
 				}
+				result = append(result, single)
 			}
-			return nil
+			return result, nil
 		},
 		Save: func(ctx context.Context, data interface{}) error {
 			res, err := cfg.parser.ParseToKeyValue(data)

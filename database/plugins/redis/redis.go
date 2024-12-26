@@ -12,10 +12,10 @@ func New[Model any](cfg *redisConf, model Model) *database.DatabaseAdapter[Model
 
 	return &database.DatabaseAdapter[Model]{
 		Name: "redis-database",
-		FindOne: func(ctx context.Context, filter database.Filter, result Model) error {
-			return nil
+		FindOne: func(ctx context.Context, filter database.Filter) (*Model, error) {
+			return nil, nil
 		},
-		Find:      func(ctx context.Context, filter database.Filter, result []Model) error { return nil },
+		Find:      func(ctx context.Context, filter database.Filter) ([]*Model, error) { return nil, nil },
 		Save:      func(ctx context.Context, data interface{}) error { return nil },
 		UpdateOne: func(ctx context.Context, filter database.Filter, update Model) error { return nil },
 		Update:    func(ctx context.Context, filter database.Filter, update []Model) error { return nil },
