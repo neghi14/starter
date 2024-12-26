@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/neghi14/starter/database"
+	"github.com/neghi14/starter/internal"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -14,7 +15,7 @@ type mongoConf struct {
 	collection    string
 	database_url  string
 	database_name string
-	parser        database.Parser
+	parser        internal.Parser
 }
 
 func NewMongoConfig() *mongoConf {
@@ -57,23 +58,54 @@ func New(cfg *mongoConf) (*database.DatabaseAdapter, error) {
 	db.Indexes().CreateMany(ctx, []mongo.IndexModel{})
 	return &database.DatabaseAdapter{
 		Name: "mongo-database",
-		FindOne: func(ctx context.Context, filter, result interface{}) error {
+		FindOne: func(ctx context.Context, filter database.Filter, result interface{}) error {
 			var data bson.D
-			res := db.FindOne(ctx, filter)
+			var fil bson.D
+
+			for _, f := range filter.Param {
+				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
+			}
+
+			res := db.FindOne(ctx, fil)
 			if err := res.Decode(&data); err != nil {
 				return err
 			}
+
 			model, _ := cfg.parser.ConvertFromBson(data)
 			return cfg.parser.ParseToStruct(result, model)
 		},
-		Find: func(ctx context.Context, filter, result interface{}) error {
+		Find: func(ctx context.Context, filter database.Filter, result []interface{}) error {
 			var data []bson.D
-			res, err := db.Find(ctx, filter)
+			var fil bson.D
+
+			for _, f := range filter.Param {
+				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
+			}
+
+			res, err := db.Find(ctx, fil, options.Find().
+				SetSort(filter.Sort).
+				SetLimit(filter.Limit).
+				SetSkip(filter.Skip))
 			if err != nil {
 				return err
 			}
-			if err := res.All(ctx, &data); err != nil {
-				return err
+			defer res.Close(ctx)
+			for res.Next(ctx) {
+				single := bson.D{}
+				if err := res.Decode(&single); err != nil {
+					return err
+				}
+				data = append(data, single)
+			}
+			for i, d := range data {
+				b, err := cfg.parser.ConvertFromBson(d)
+				if err != nil {
+					return err
+				}
+				err = cfg.parser.ParseToStruct(result[i], b)
+				if err != nil {
+					return err
+				}
 			}
 			return nil
 		},
@@ -93,29 +125,58 @@ func New(cfg *mongoConf) (*database.DatabaseAdapter, error) {
 
 			return nil
 		},
-		UpdateOne: func(ctx context.Context, filter, update interface{}) error {
-			_, err := db.UpdateOne(ctx, filter, update)
+		UpdateOne: func(ctx context.Context, filter database.Filter, update interface{}) error {
+			var fil bson.D
+
+			for _, f := range filter.Param {
+				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
+			}
+			parsed, err := cfg.parser.ParseToKeyValue(update)
+			if err != nil {
+				return err
+			}
+			data, err := cfg.parser.ConvertToBson(parsed)
+			if err != nil {
+				return err
+			}
+			_, err = db.UpdateOne(ctx, fil, data)
 			if err != nil {
 				return err
 			}
 			return nil
 		},
-		Update: func(ctx context.Context, filter, update interface{}) error {
-			_, err := db.UpdateMany(ctx, filter, update)
+		Update: func(ctx context.Context, filter database.Filter, update interface{}) error {
+			parsed, err := cfg.parser.ParseToKeyValue(update)
+			if err != nil {
+				return err
+			}
+			data, err := cfg.parser.ConvertToBson(parsed)
+			if err != nil {
+				return err
+			}
+			_, err = db.UpdateMany(ctx, filter, bson.D{{Key: "$set", Value: data}})
 			if err != nil {
 				return err
 			}
 			return nil
 		},
-		DeleteOne: func(ctx context.Context, filter interface{}) error {
-			_, err := db.DeleteOne(ctx, filter)
+		DeleteOne: func(ctx context.Context, filter database.Filter) error {
+			var fil bson.D
+			for _, f := range filter.Param {
+				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
+			}
+			_, err := db.DeleteOne(ctx, fil)
 			if err != nil {
 				return err
 			}
 			return nil
 		},
-		Delete: func(ctx context.Context, filter interface{}) error {
-			_, err := db.DeleteMany(ctx, filter)
+		Delete: func(ctx context.Context, filter database.Filter) error {
+			var fil bson.D
+			for _, f := range filter.Param {
+				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
+			}
+			_, err := db.DeleteMany(ctx, fil)
 			if err != nil {
 				return err
 			}

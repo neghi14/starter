@@ -1,4 +1,4 @@
-package database
+package internal
 
 import (
 	"errors"
@@ -10,8 +10,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-var db sync.Once
-var db_instance *Parser
+var parser sync.Once
+var parser_instance *Parser
 
 // Supported Tags
 const (
@@ -46,11 +46,11 @@ type M []E
 type Parser struct{}
 
 func NewParser() *Parser {
-	db.Do(func() {
-		db_instance = &Parser{}
+	parser.Do(func() {
+		parser_instance = &Parser{}
 	})
 
-	return db_instance
+	return parser_instance
 }
 
 func (m *Parser) ParseToKeyValue(d interface{}) (M, error) {
