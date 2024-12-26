@@ -1,47 +1,48 @@
-package database
+package mongodb
 
 import (
 	"context"
 	"time"
 
-	"github.com/neghi14/starter"
+	"github.com/neghi14/starter/database"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-type mongoOptions struct {
+type mongoConf struct {
 	collection    string
 	database_url  string
 	database_name string
+	parser        database.Parser
 }
 
-func NewMongoConfig() *mongoOptions {
-	opts := &mongoOptions{}
+func NewMongoConfig() *mongoConf {
+	opts := &mongoConf{}
 	return opts
 }
 
 // SetCollection is used to set the/update the collection used
 // by the mongodb plugin
-func (mo *mongoOptions) SetCollection(col string) *mongoOptions {
+func (mo *mongoConf) SetCollection(col string) *mongoConf {
 	mo.collection = col
 	return mo
 }
 
 // SetConnectionUrl sets the current url used for database connection
-func (mo *mongoOptions) SetConnectionUrl(url string) *mongoOptions {
+func (mo *mongoConf) SetConnectionUrl(url string) *mongoConf {
 	mo.database_url = url
 	return mo
 }
 
 // SetDatabaseName set the database name used by the current connection
-func (mo *mongoOptions) SetDatabaseName(name string) *mongoOptions {
+func (mo *mongoConf) SetDatabaseName(name string) *mongoConf {
 	mo.database_name = name
 	return mo
 }
 
-func Mongo(cfg *mongoOptions) (*starter.DatabaseAdapter, error) {
-	mo := new()
+func New(cfg *mongoConf) (*database.DatabaseAdapter, error) {
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	client, err := mongo.Connect(options.Client().ApplyURI(cfg.database_url))
@@ -52,9 +53,9 @@ func Mongo(cfg *mongoOptions) (*starter.DatabaseAdapter, error) {
 		return nil, err
 	}
 	db := client.Database(cfg.database_name).Collection(cfg.collection)
-	mo.getAttr()
+
 	db.Indexes().CreateMany(ctx, []mongo.IndexModel{})
-	return &starter.DatabaseAdapter{
+	return &database.DatabaseAdapter{
 		Name: "mongo-database",
 		FindOne: func(ctx context.Context, filter, result interface{}) error {
 			var data bson.D
@@ -62,8 +63,8 @@ func Mongo(cfg *mongoOptions) (*starter.DatabaseAdapter, error) {
 			if err := res.Decode(&data); err != nil {
 				return err
 			}
-			model, _ := mo.ConvertFromBson(data)
-			return mo.parseToStruct(result, model)
+			model, _ := cfg.parser.ConvertFromBson(data)
+			return cfg.parser.ParseToStruct(result, model)
 		},
 		Find: func(ctx context.Context, filter, result interface{}) error {
 			var data []bson.D
@@ -77,11 +78,11 @@ func Mongo(cfg *mongoOptions) (*starter.DatabaseAdapter, error) {
 			return nil
 		},
 		Save: func(ctx context.Context, data interface{}) error {
-			res, err := mo.parseToKeyValue(data)
+			res, err := cfg.parser.ParseToKeyValue(data)
 			if err != nil {
 				return err
 			}
-			input, err := mo.ConvertToBson(res)
+			input, err := cfg.parser.ConvertToBson(res)
 			if err != nil {
 				return err
 			}

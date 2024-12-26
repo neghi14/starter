@@ -1,4 +1,4 @@
-package starter
+package payments
 
 type PaymentAdapter struct {
 	Name   string

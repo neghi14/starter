@@ -11,7 +11,7 @@ import (
 )
 
 var db sync.Once
-var db_instance *Model
+var db_instance *Parser
 
 // Supported Tags
 const (
@@ -41,25 +41,19 @@ type E struct {
 	Value interface{}
 }
 
-type attrBody struct {
-	key      string
-	unique   bool
-	required bool
-}
-
 type M []E
 
-type Model struct{}
+type Parser struct{}
 
-func new() *Model {
+func NewParser() *Parser {
 	db.Do(func() {
-		db_instance = &Model{}
+		db_instance = &Parser{}
 	})
 
 	return db_instance
 }
 
-func (m *Model) parseToKeyValue(d interface{}) (M, error) {
+func (m *Parser) ParseToKeyValue(d interface{}) (M, error) {
 	var res M
 	data, err := m.parse(d)
 	if err != nil {
@@ -102,7 +96,7 @@ func (m *Model) parseToKeyValue(d interface{}) (M, error) {
 	return res, nil
 }
 
-func (m *Model) parseToStruct(obj interface{}, data M) error {
+func (m *Parser) ParseToStruct(obj interface{}, data M) error {
 
 	mo, err := m.parse(obj)
 	if err != nil {
@@ -121,7 +115,7 @@ func (m *Model) parseToStruct(obj interface{}, data M) error {
 	return nil
 }
 
-func (m *Model) parse(d interface{}) ([]*model, error) {
+func (m *Parser) parse(d interface{}) ([]*model, error) {
 	var res []*model
 	v := reflect.ValueOf(d)
 
@@ -155,7 +149,7 @@ func (m *Model) parse(d interface{}) ([]*model, error) {
 	return res, nil
 }
 
-func (m *Model) ConvertToBson(data M) (bson.D, error) {
+func (m *Parser) ConvertToBson(data M) (bson.D, error) {
 	var res bson.D
 
 	for _, d := range data {
@@ -172,7 +166,7 @@ func (m *Model) ConvertToBson(data M) (bson.D, error) {
 	return res, nil
 }
 
-func (m *Model) ConvertFromBson(data bson.D) (M, error) {
+func (m *Parser) ConvertFromBson(data bson.D) (M, error) {
 	var res M
 
 	for _, d := range data {
@@ -188,6 +182,6 @@ func (m *Model) ConvertFromBson(data bson.D) (M, error) {
 	return res, nil
 }
 
-func (m *Model) getAttr() error {
+func (m *Parser) getAttr() error {
 	return nil
 }

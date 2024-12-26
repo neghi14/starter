@@ -1,8 +1,6 @@
-package starter
+package database
 
-import (
-	"context"
-)
+import "context"
 
 type DatabaseAdapter struct {
 	Name      string

@@ -1,6 +1,6 @@
-package payments
+package paystack
 
-import "github.com/neghi14/starter"
+import "github.com/neghi14/starter/payments"
 
 type PaystackConfig struct {
 	key string
@@ -16,9 +16,9 @@ func (p *PaystackConfig) SetKey(key string) *PaystackConfig {
 	return p
 }
 
-func Paystack(config *PaystackConfig) (*starter.PaymentAdapter, error) {
+func New(config *PaystackConfig) (*payments.PaymentAdapter, error) {
 
-	return &starter.PaymentAdapter{
+	return &payments.PaymentAdapter{
 		Name: "paystack-payment",
 	}, nil
 }
