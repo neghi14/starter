@@ -60,7 +60,7 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 	return &database.DatabaseAdapter[Model]{
 		Name: "mongo-database",
 		Count: func(ctx context.Context, filter database.Filter) (int64, error) {
-			var fil bson.D
+			fil := bson.D{}
 
 			for _, f := range filter.Param {
 				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
@@ -74,7 +74,7 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 		FindOne: func(ctx context.Context, filter database.Filter) (*Model, error) {
 			var result Model
 			var data bson.D
-			var fil bson.D
+			fil := bson.D{}
 
 			for _, f := range filter.Param {
 				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
@@ -93,7 +93,7 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			return &result, nil
 		},
 		Find: func(ctx context.Context, filter database.Filter) ([]*Model, error) {
-			var fil bson.D
+			fil := bson.D{}
 			var result []*Model
 
 			for _, f := range filter.Param {
@@ -143,7 +143,7 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			return nil
 		},
 		UpdateOne: func(ctx context.Context, filter database.Filter, update Model) error {
-			var fil bson.D
+			fil := bson.D{}
 
 			for _, f := range filter.Param {
 				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
@@ -178,7 +178,7 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			return nil
 		},
 		DeleteOne: func(ctx context.Context, filter database.Filter) error {
-			var fil bson.D
+			fil := bson.D{}
 			for _, f := range filter.Param {
 				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
 			}
@@ -189,7 +189,7 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			return nil
 		},
 		Delete: func(ctx context.Context, filter database.Filter) error {
-			var fil bson.D
+			fil := bson.D{}
 			for _, f := range filter.Param {
 				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
 			}
