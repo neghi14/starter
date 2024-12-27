@@ -118,7 +118,7 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 					return nil, err
 				}
 				var mo Model
-				err = cfg.parser.ParseToStruct(&single, b)
+				err = cfg.parser.ParseToStruct(&mo, b)
 				if err != nil {
 					return nil, err
 				}
