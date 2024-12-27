@@ -2,24 +2,30 @@ package mongodb
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/neghi14/starter/database"
-	"github.com/neghi14/starter/internal"
+	"github.com/neghi14/starter/internal/parser"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
+var mongo_client *sync.Once
+
+var mongo_instance *mongo.Client
+
 type mongoConf struct {
+	*sync.Once
 	collection    string
 	database_url  string
 	database_name string
-	parser        internal.Parser
+	parser        parser.Parser
 	timestamp     bool
 }
 
-func NewMongoConfig() *mongoConf {
+func Opts() *mongoConf {
 	opts := &mongoConf{}
 	return opts
 }
@@ -47,14 +53,18 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	client, err := mongo.Connect(options.Client().ApplyURI(cfg.database_url))
-	if err != nil {
+	mongo_client.Do(func() {
+		client, err := mongo.Connect(options.Client().ApplyURI(cfg.database_url))
+		if err != nil {
+			panic(err)
+		}
+
+		mongo_instance = client
+	})
+	if err := mongo_instance.Ping(ctx, nil); err != nil {
 		return nil, err
 	}
-	if err := client.Ping(ctx, nil); err != nil {
-		return nil, err
-	}
-	db := client.Database(cfg.database_name).Collection(cfg.collection)
+	db := mongo_instance.Database(cfg.database_name).Collection(cfg.collection)
 
 	db.Indexes().CreateMany(ctx, []mongo.IndexModel{})
 	return &database.DatabaseAdapter[Model]{
@@ -86,7 +96,7 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			}
 
 			model, _ := cfg.parser.ConvertFromBson(data)
-			err = cfg.parser.ParseToStruct(&result, model)
+			err := cfg.parser.ParseToStruct(&result, model)
 			if err != nil {
 				return nil, err
 			}
@@ -135,6 +145,12 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			if err != nil {
 				return err
 			}
+			if cfg.timestamp {
+				created_at := bson.E{Key: "created_at", Value: time.Now().UTC()}
+				updated_at := bson.E{Key: "updated_at", Value: time.Now().UTC()}
+
+				input = append(input, created_at, updated_at)
+			}
 			_, err = db.InsertOne(ctx, input)
 			if err != nil {
 				return err
@@ -156,6 +172,10 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			if err != nil {
 				return err
 			}
+			if cfg.timestamp {
+				updated_at := bson.E{Key: "updated_at", Value: time.Now().UTC()}
+				data = append(data, updated_at)
+			}
 			_, err = db.UpdateOne(ctx, fil, data)
 			if err != nil {
 				return err
@@ -170,6 +190,10 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			data, err := cfg.parser.ConvertToBson(parsed)
 			if err != nil {
 				return err
+			}
+			if cfg.timestamp {
+				updated_at := bson.E{Key: "updated_at", Value: time.Now().UTC()}
+				data = append(data, updated_at)
 			}
 			_, err = db.UpdateMany(ctx, filter, bson.D{{Key: "$set", Value: data}})
 			if err != nil {

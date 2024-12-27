@@ -1,4 +1,4 @@
-package internal
+package parser
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-var parser sync.Once
+var parser *sync.Once
 var parser_instance *Parser
 
 // Supported Tags
@@ -23,17 +23,13 @@ const (
 
 	// mongoIDField is the _id field for mongodb
 	mongoIDField = "_id"
-
-	attrRequired = "required"
-	attrUnique   = "unique"
 )
 
 type model struct {
-	attributes   []string
-	fieldName    string
-	fieldValue   reflect.Value
-	mongoField   string
-	defaultField string
+	attributes []string
+	fieldName  string
+	fieldValue reflect.Value
+	fieldTag   string
 }
 
 type E struct {
@@ -45,7 +41,7 @@ type M []E
 
 type Parser struct{}
 
-func NewParser() *Parser {
+func New() *Parser {
 	parser.Do(func() {
 		parser_instance = &Parser{}
 	})
@@ -60,12 +56,7 @@ func (m *Parser) ParseToKeyValue(d interface{}) (M, error) {
 		return nil, err
 	}
 	for _, dd := range data {
-		var field string
-		if dd.mongoField == "" {
-			field = dd.defaultField
-		} else {
-			field = dd.mongoField
-		}
+
 		var val interface{}
 		switch dd.fieldValue.Kind() {
 		case reflect.Int:
@@ -89,7 +80,7 @@ func (m *Parser) ParseToKeyValue(d interface{}) (M, error) {
 		}
 
 		if !dd.fieldValue.IsZero() {
-			res = append(res, E{Key: field, Value: val})
+			res = append(res, E{Key: dd.fieldTag, Value: val})
 		}
 
 	}
@@ -105,7 +96,7 @@ func (m *Parser) ParseToStruct(obj interface{}, data M) error {
 	for _, mod := range mo {
 		if mod.fieldValue.IsValid() && mod.fieldValue.CanSet() {
 			for _, re := range data {
-				if re.Key == mod.defaultField || re.Key == mod.mongoField {
+				if re.Key == mod.fieldTag {
 					mod.fieldValue.Set(reflect.ValueOf(re.Value))
 				}
 			}
@@ -133,11 +124,11 @@ func (m *Parser) parse(d interface{}) ([]*model, error) {
 	for i := 0; i < v.NumField(); i++ {
 		fType := t.Field(i)
 		m := &model{}
-		m.fieldName = v.Type().Field(i).Name
+		m.fieldName = fType.Name
 		m.fieldValue = v.Field(i)
 
 		if def, ok := fType.Tag.Lookup(tagDefault); ok {
-			m.defaultField = def
+			m.fieldTag = def
 		}
 		if def, ok := fType.Tag.Lookup(tagAttributes); ok {
 			attr := strings.Split(def, ",")
@@ -182,6 +173,6 @@ func (m *Parser) ConvertFromBson(data bson.D) (M, error) {
 	return res, nil
 }
 
-func (m *Parser) getAttr() error {
-	return nil
-}
+// func (m *Parser) getAttr() error {
+// 	return nil
+// }
