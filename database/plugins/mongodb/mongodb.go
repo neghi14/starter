@@ -16,6 +16,7 @@ type mongoConf struct {
 	database_url  string
 	database_name string
 	parser        internal.Parser
+	timestamp     bool
 }
 
 func NewMongoConfig() *mongoConf {
@@ -58,6 +59,18 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 	db.Indexes().CreateMany(ctx, []mongo.IndexModel{})
 	return &database.DatabaseAdapter[Model]{
 		Name: "mongo-database",
+		Count: func(ctx context.Context, filter database.Filter) (int64, error) {
+			var fil bson.D
+
+			for _, f := range filter.Param {
+				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
+			}
+			size, err := db.CountDocuments(ctx, fil)
+			if err != nil {
+				return 0, err
+			}
+			return size, nil
+		},
 		FindOne: func(ctx context.Context, filter database.Filter) (*Model, error) {
 			var result Model
 			var data bson.D
@@ -80,16 +93,15 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			return &result, nil
 		},
 		Find: func(ctx context.Context, filter database.Filter) ([]*Model, error) {
-			var data []bson.D
 			var fil bson.D
 			var result []*Model
 
 			for _, f := range filter.Param {
 				fil = append(fil, bson.E{Key: f.Key, Value: f.Value})
 			}
-
+			sort := bson.D{{Key: filter.Sort.Key, Value: filter.Sort.Value}}
 			res, err := db.Find(ctx, fil, options.Find().
-				SetSort(filter.Sort).
+				SetSort(sort).
 				SetLimit(filter.Limit).
 				SetSkip(filter.Skip))
 			if err != nil {
@@ -97,23 +109,20 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			}
 			defer res.Close(ctx)
 			for res.Next(ctx) {
-				single := bson.D{}
+				var single bson.D
 				if err := res.Decode(&single); err != nil {
 					return nil, err
 				}
-				data = append(data, single)
-			}
-			for _, d := range data {
-				b, err := cfg.parser.ConvertFromBson(d)
+				b, err := cfg.parser.ConvertFromBson(single)
 				if err != nil {
 					return nil, err
 				}
-				var single *Model
+				var mo Model
 				err = cfg.parser.ParseToStruct(&single, b)
 				if err != nil {
 					return nil, err
 				}
-				result = append(result, single)
+				result = append(result, &mo)
 			}
 			return result, nil
 		},

@@ -4,6 +4,7 @@ import "context"
 
 type DatabaseAdapter[T any] struct {
 	Name      string
+	Count     func(ctx context.Context, filter Filter) (int64, error)
 	FindOne   func(ctx context.Context, filter Filter) (*T, error)
 	Find      func(ctx context.Context, filter Filter) ([]*T, error)
 	Save      func(ctx context.Context, data interface{}) error
@@ -33,8 +34,6 @@ type Param struct {
 
 func Opts() *Filter {
 	return &Filter{
-		Skip:  0,
-		Limit: 10,
 		Sort: Param{
 			Key:   "_id",
 			Value: 1,
