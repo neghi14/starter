@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -14,11 +16,11 @@ func main() {
 	r := chi.NewRouter()
 
 	type UserModel struct {
-		Email string `db:"email"`
-		Name  string `db:"name"`
+		Email string `db:"email" json:"email"`
+		Name  string `db:"name" json:"name"`
 	}
 
-	redisDB, err := redisdb.New(redisdb.Opts(), UserModel{})
+	redisDB, err := redisdb.New(redisdb.Opts().SetConnectionUrl("localhost:6379").SetDatabase(1).SetTable("users"), UserModel{})
 	if err != nil {
 		panic(err)
 	}
@@ -43,8 +45,23 @@ func main() {
 	})
 
 	r.Post("/users", func(w http.ResponseWriter, r *http.Request) {
+		var body UserModel
 
+		err := json.NewDecoder(r.Body).Decode(&body)
+		if err != nil {
+			utils.JSON(w).SetStatus(utils.ResponseError).SetStatusCode(http.StatusBadRequest).SetMessage(err.Error()).Send()
+			return
+		}
+
+		err = redisDB.Save(r.Context(), body)
+		if err != nil {
+			utils.JSON(w).SetStatus(utils.ResponseError).SetStatusCode(http.StatusBadRequest).SetMessage(err.Error()).Send()
+			return
+		}
+
+			utils.JSON(w).SetStatus(utils.ResponseSuccess).SetStatusCode(http.StatusCreated).Send()
 	})
 
+	fmt.Println("Connection success")
 	panic(http.ListenAndServe(":8080", r))
 }
