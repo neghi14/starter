@@ -6,6 +6,7 @@ import (
 
 	"github.com/neghi14/starter/database"
 	"github.com/neghi14/starter/internal/parser"
+	"github.com/neghi14/starter/utils"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -53,12 +54,26 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 	if _, err := rdb.Ping(ctx).Result(); err != nil {
 		return nil, err
 	}
+	index := []*redis.FieldSchema{}
+
+	mo, err := cfg.parser.ParseToKeyValue(&model)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, m := range mo {
+		index = append(index, &redis.FieldSchema{
+			FieldName: "$." + m.Key,
+			As:        m.Key,
+			FieldType: redis.SearchFieldTypeText,
+		})
+	}
 
 	// Create Index
 	if _, err := rdb.FTCreate(ctx, "idx:"+cfg.table, &redis.FTCreateOptions{
 		OnJSON: true,
 		Prefix: []interface{}{cfg.table + ":"},
-	}, &redis.FieldSchema{}).Result(); err != nil {
+	}, index...).Result(); err != nil {
 		return nil, err
 	}
 
@@ -151,5 +166,5 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 }
 
 func createKey(prefix string) string {
-	return prefix
+	return prefix + ":" + utils.Generate(12)
 }
