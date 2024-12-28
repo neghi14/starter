@@ -182,7 +182,7 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			}
 			return nil
 		},
-		Update: func(ctx context.Context, filter database.Filter, update []Model) error {
+		Update: func(ctx context.Context, filter database.Filter, update Model) error {
 			parsed, err := cfg.parser.ParseToKeyValue(update)
 			if err != nil {
 				return err
