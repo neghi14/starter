@@ -63,7 +63,8 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 	}
 
 	return &database.DatabaseAdapter[Model]{
-		Name: "redis-database",
+		Name:  "redis-database",
+		Count: func(ctx context.Context, filter database.Filter) (int64, error) { return 0, nil },
 		FindOne: func(ctx context.Context, filter database.Filter) (*Model, error) {
 			//TODO: create function that parses filter to redis query object
 			_, err := rdb.FTSearch(ctx, "idx:"+cfg.table, "").Result()
@@ -73,7 +74,13 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 
 			return nil, nil
 		},
-		Find: func(ctx context.Context, filter database.Filter) ([]*Model, error) { return nil, nil },
+		Find: func(ctx context.Context, filter database.Filter) ([]*Model, error) {
+			_, err := rdb.FTSearch(ctx, "idx:"+cfg.table, "").Result()
+			if err != nil {
+				return nil, err
+			}
+			return nil, nil
+		},
 		Save: func(ctx context.Context, data Model) error {
 			kv, err := cfg.parser.ParseToKeyValue(&data)
 			if err != nil {
@@ -91,11 +98,55 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 			}
 			return nil
 		},
-		UpdateOne: func(ctx context.Context, filter database.Filter, update Model) error { return nil },
-		Update:    func(ctx context.Context, filter database.Filter, update []Model) error { return nil },
-		DeleteOne: func(ctx context.Context, filter database.Filter) error { return nil },
-		Delete:    func(ctx context.Context, filter database.Filter) error { return nil },
-		Disconnet: func(ctx context.Context) error { return nil },
+		UpdateOne: func(ctx context.Context, filter database.Filter, update Model) error {
+			kv, err := cfg.parser.ParseToKeyValue(&update)
+			if err != nil {
+				return err
+			}
+			input := map[string]interface{}{}
+
+			for _, k := range kv {
+				input[k.Key] = k.Value
+			}
+
+			_, err = rdb.JSONSet(ctx, cfg.table+":"+filter.Param[0].Key, "*", input).Result()
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		Update: func(ctx context.Context, filter database.Filter, update Model) error {
+			kv, err := cfg.parser.ParseToKeyValue(&update)
+			if err != nil {
+				return err
+			}
+			input := map[string]interface{}{}
+
+			for _, k := range kv {
+				input[k.Key] = k.Value
+			}
+
+			_, err = rdb.JSONSet(ctx, cfg.table+":"+filter.Param[0].Key, "*", input).Result()
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+		DeleteOne: func(ctx context.Context, filter database.Filter) error {
+			if _, err := rdb.JSONDel(ctx, cfg.table+":"+filter.Param[0].Key, "*").Result(); err != nil {
+				return err
+			}
+			return nil
+		},
+		Delete: func(ctx context.Context, filter database.Filter) error {
+			if _, err := rdb.JSONDel(ctx, cfg.table+":"+filter.Param[0].Key, "*").Result(); err != nil {
+				return err
+			}
+			return nil
+		},
+		Disconnet: func(ctx context.Context) error {
+			return rdb.Close()
+		},
 	}, nil
 }
 
