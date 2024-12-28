@@ -7,7 +7,7 @@ type DatabaseAdapter[T any] struct {
 	Count     func(ctx context.Context, filter Filter) (int64, error)
 	FindOne   func(ctx context.Context, filter Filter) (*T, error)
 	Find      func(ctx context.Context, filter Filter) ([]*T, error)
-	Save      func(ctx context.Context, data interface{}) error
+	Save      func(ctx context.Context, data T) error
 	UpdateOne func(ctx context.Context, filter Filter, update T) error
 	Update    func(ctx context.Context, filter Filter, update []T) error
 	DeleteOne func(ctx context.Context, filter Filter) error

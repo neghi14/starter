@@ -136,7 +136,7 @@ func New[Model any](cfg *mongoConf, model Model) (*database.DatabaseAdapter[Mode
 			}
 			return result, nil
 		},
-		Save: func(ctx context.Context, data interface{}) error {
+		Save: func(ctx context.Context, data Model) error {
 			res, err := cfg.parser.ParseToKeyValue(data)
 			if err != nil {
 				return err
