@@ -98,6 +98,13 @@ func Test_redisConf_SetConnectionUrl(t *testing.T) {
 		},
 		{
 			name: "Check Non Nil ",
+			r:    r,
+			args: args{
+				url: "localhost:6379",
+			},
+			want: &redisConf{
+				connection_url: "localhost:6379",
+			},
 		},
 	}
 	for _, tt := range tests {
