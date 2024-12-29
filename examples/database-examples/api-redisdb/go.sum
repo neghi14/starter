@@ -12,5 +12,7 @@ github.com/neghi14/starter v0.1.3 h1:9TxpWMgA9AkaG4u+OO6JOZO+juEDXW8wGP/+bJhkWyw
 github.com/neghi14/starter v0.1.3/go.mod h1:Y5RN/p1ZQB5tpmBGtKQyU/N3OO6FJlbqXUBqRcVyny8=
 github.com/neghi14/starter v0.1.4-0.20241228010644-e453c46da619 h1:nZpNrXqdnxomTmedJ+NpOGRMbEdxI2nxSxuREYiwlaY=
 github.com/neghi14/starter v0.1.4-0.20241228010644-e453c46da619/go.mod h1:Y5RN/p1ZQB5tpmBGtKQyU/N3OO6FJlbqXUBqRcVyny8=
+github.com/neghi14/starter v0.1.4-alpha.2 h1:vGV1StxT/gaW4RaDuE89qfIUKekv2sGsoySd/5mu+5Q=
+github.com/neghi14/starter v0.1.4-alpha.2/go.mod h1:Y5RN/p1ZQB5tpmBGtKQyU/N3OO6FJlbqXUBqRcVyny8=
 github.com/redis/go-redis/v9 v9.7.0 h1:HhLSs+B6O021gwzl+locl0zEDnyNkxMtf/Z3NNBMa9E=
 github.com/redis/go-redis/v9 v9.7.0/go.mod h1:f6zhXITC7JUJIlPEiBOTXxJgPLdZcA93GewI7inzyWw=

@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/neghi14/starter/database"
-	redisdb "github.com/neghi14/starter/database/plugins/redis"
+	redisdb "github.com/neghi14/starter/database/plugins/redisdb"
 	"github.com/neghi14/starter/utils"
 )
 
@@ -20,7 +20,7 @@ func main() {
 		Name  string `db:"name" json:"name"`
 	}
 
-	redisDB, err := redisdb.New(redisdb.Opts().SetConnectionUrl("localhost:6379").SetDatabase(1).SetTable("users"), UserModel{})
+	redisDB, err := redisdb.New(redisdb.Opts().SetConnectionUrl("localhost:6379").SetDatabase(0).SetTable("users"), UserModel{})
 	if err != nil {
 		panic(err)
 	}

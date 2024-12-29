@@ -2,6 +2,8 @@ package redisdb
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/neghi14/starter/database"
@@ -13,7 +15,7 @@ import (
 type redisConf struct {
 	database       int
 	connection_url string
-	ttl            time.Time
+	ttl            int64
 	table          string
 	parser         parser.Parser
 }
@@ -32,7 +34,7 @@ func (r *redisConf) SetConnectionUrl(url string) *redisConf {
 	return r
 }
 
-func (r *redisConf) SetTTL(ttl time.Time) *redisConf {
+func (r *redisConf) SetTTL(ttl int64) *redisConf {
 	r.ttl = ttl
 	return r
 }
@@ -56,7 +58,7 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 	}
 	index := []*redis.FieldSchema{}
 
-	mo, err := cfg.parser.ParseToKeyValue(&model)
+	mo, err := cfg.parser.ParseKeyOnly(&model)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +67,7 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 		index = append(index, &redis.FieldSchema{
 			FieldName: "$." + m.Key,
 			As:        m.Key,
-			FieldType: redis.SearchFieldTypeText,
+			FieldType: getRedisSearchKeyType(m.Type),
 		})
 	}
 
@@ -73,7 +75,9 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 	if _, err := rdb.FTCreate(ctx, "idx:"+cfg.table, &redis.FTCreateOptions{
 		OnJSON: true,
 		Prefix: []interface{}{cfg.table + ":"},
-	}, index...).Result(); err != nil {
+	}, index...).Result(); errors.Is(err, errors.New("Index already exist")) {
+		fmt.Println("Index already created, skipping...")
+	} else {
 		return nil, err
 	}
 
@@ -106,11 +110,20 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 			for _, k := range kv {
 				input[k.Key] = k.Value
 			}
+			_, err = rdb.Pipelined(ctx, func(p redis.Pipeliner) error {
+				key := createKey(cfg.table)
 
-			_, err = rdb.JSONSet(ctx, createKey(cfg.table), "*", input).Result()
+				p.JSONSetMode(ctx, key, "*", input, "NX")
+				if cfg.ttl != 0 {
+					p.Expire(ctx, key, time.Second*time.Duration(cfg.ttl))
+				}
+				return nil
+			})
+
 			if err != nil {
 				return err
 			}
+
 			return nil
 		},
 		UpdateOne: func(ctx context.Context, filter database.Filter, update Model) error {
@@ -123,8 +136,14 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 			for _, k := range kv {
 				input[k.Key] = k.Value
 			}
-
-			_, err = rdb.JSONSet(ctx, cfg.table+":"+filter.Param[0].Key, "*", input).Result()
+			_, err = rdb.Pipelined(ctx, func(p redis.Pipeliner) error {
+				key := cfg.table + ":" + filter.Param[0].Key
+				p.JSONSetMode(ctx, key, "*", input, "XX")
+				if cfg.ttl != 0 {
+					p.Expire(ctx, key, time.Second*time.Duration(cfg.ttl))
+				}
+				return nil
+			})
 			if err != nil {
 				return err
 			}
@@ -167,4 +186,15 @@ func New[Model any](cfg *redisConf, model Model) (*database.DatabaseAdapter[Mode
 
 func createKey(prefix string) string {
 	return prefix + ":" + utils.Generate(12)
+}
+
+func getRedisSearchKeyType(parserType parser.ParserValueType) redis.SearchFieldType {
+	switch parserType {
+	case parser.Num:
+		return redis.SearchFieldTypeNumeric
+	case parser.Text:
+		return redis.SearchFieldTypeText
+	default:
+		return redis.SearchFieldTypeInvalid
+	}
 }

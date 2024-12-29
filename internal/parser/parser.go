@@ -13,6 +13,22 @@ import (
 var parser *sync.Once
 var parser_instance *Parser
 
+type ParserValueType int
+
+const (
+	Num ParserValueType = iota
+	Text
+)
+
+var parserValueTypeMap = map[ParserValueType]string{
+	Num:  "Num",
+	Text: "Text",
+}
+
+func (p ParserValueType) String() string {
+	return parserValueTypeMap[p]
+}
+
 // Supported Tags
 const (
 	// tagDefault name of model variable or list of names
@@ -35,6 +51,7 @@ type model struct {
 type E struct {
 	Key   string
 	Value interface{}
+	Type  ParserValueType
 }
 
 type M []E
@@ -86,7 +103,30 @@ func (m *Parser) ParseToKeyValue(d interface{}) (M, error) {
 	}
 	return res, nil
 }
-
+func (m *Parser) ParseKeyOnly(d interface{}) (M, error) {
+	var res M
+	data, err := m.parse(d)
+	if err != nil {
+		return nil, err
+	}
+	for _, dd := range data {
+		var valType ParserValueType
+		switch dd.fieldValue.Kind() {
+		case reflect.Int:
+			valType = Num
+		case reflect.Float32:
+			valType = Num
+		case reflect.Float64:
+			valType = Num
+		case reflect.String:
+			valType = Text
+		default:
+			return nil, errors.New("unsupported field type")
+		}
+		res = append(res, E{Key: dd.fieldTag, Type: valType})
+	}
+	return res, nil
+}
 func (m *Parser) ParseToStruct(obj interface{}, data M) error {
 
 	mo, err := m.parse(obj)
