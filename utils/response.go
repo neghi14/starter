@@ -3,25 +3,9 @@ package utils
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/neghi14/starter"
 )
-
-type responseStatus int
-
-const (
-	ResponseSuccess responseStatus = iota
-	ResponseError
-	ResponseFail
-)
-
-var responseStatusString = map[responseStatus]string{
-	ResponseSuccess: "success",
-	ResponseError:   "error",
-	ResponseFail:    "fail",
-}
-
-func (r responseStatus) string() string {
-	return responseStatusString[r]
-}
 
 type httpResponse struct {
 	Status  string      `json:"status,omitempty"`
@@ -49,8 +33,8 @@ func (h *HttpResponseBuilder) SetStatusCode(code int) *HttpResponseBuilder {
 	h.statusCode = code
 	return h
 }
-func (h *HttpResponseBuilder) SetStatus(status responseStatus) *HttpResponseBuilder {
-	h.res.Status = status.string()
+func (h *HttpResponseBuilder) SetStatus(status starter.ResponseStatus) *HttpResponseBuilder {
+	h.res.Status = status.String()
 	return h
 }
 func (h *HttpResponseBuilder) SetMessage(message string) *HttpResponseBuilder {

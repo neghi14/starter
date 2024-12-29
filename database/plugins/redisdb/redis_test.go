@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/neghi14/starter"
 	"github.com/neghi14/starter/database"
-	"github.com/neghi14/starter/internal/parser"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -76,6 +76,7 @@ func Test_redisConf_SetDatabase(t *testing.T) {
 }
 
 func Test_redisConf_SetConnectionUrl(t *testing.T) {
+	r := &redisConf{}
 	type args struct {
 		url string
 	}
@@ -85,7 +86,19 @@ func Test_redisConf_SetConnectionUrl(t *testing.T) {
 		args args
 		want *redisConf
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Check Nil",
+			r:    r,
+			args: args{
+				url: "",
+			},
+			want: &redisConf{
+				connection_url: "",
+			},
+		},
+		{
+			name: "Check Non Nil ",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -97,6 +110,7 @@ func Test_redisConf_SetConnectionUrl(t *testing.T) {
 }
 
 func Test_redisConf_SetTTL(t *testing.T) {
+	r := &redisConf{}
 	type args struct {
 		ttl int64
 	}
@@ -106,7 +120,24 @@ func Test_redisConf_SetTTL(t *testing.T) {
 		args args
 		want *redisConf
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Check Nil TTL",
+			r:    r,
+			args: args{
+				ttl: 0,
+			},
+			want: &redisConf{},
+		},
+		{
+			name: "Check Non Nil TTL",
+			r:    r,
+			args: args{
+				ttl: 32400,
+			},
+			want: &redisConf{
+				ttl: 32400,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -118,6 +149,7 @@ func Test_redisConf_SetTTL(t *testing.T) {
 }
 
 func Test_redisConf_SetTable(t *testing.T) {
+	r := &redisConf{}
 	type args struct {
 		table string
 	}
@@ -127,7 +159,26 @@ func Test_redisConf_SetTable(t *testing.T) {
 		args args
 		want *redisConf
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Check Nil Table",
+			r:    r,
+			args: args{
+				table: "",
+			},
+			want: &redisConf{
+				table: "",
+			},
+		},
+		{
+			name: "Check Non Nil Table",
+			r:    r,
+			args: args{
+				table: "users",
+			},
+			want: &redisConf{
+				table: "users",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -160,7 +211,7 @@ func Test_createKey(t *testing.T) {
 
 func Test_getRedisSearchKeyType(t *testing.T) {
 	type args struct {
-		parserType parser.ParserValueType
+		parserType starter.ParserValueType
 	}
 	tests := []struct {
 		name string

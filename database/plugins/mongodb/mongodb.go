@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/neghi14/starter"
 	"github.com/neghi14/starter/database"
-	"github.com/neghi14/starter/internal/parser"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -21,7 +21,7 @@ type mongoConf struct {
 	collection    string
 	database_url  string
 	database_name string
-	parser        parser.Parser
+	parser        starter.Parser
 	timestamp     bool
 }
 

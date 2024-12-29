@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/neghi14/starter"
 	"github.com/neghi14/starter/database"
-	"github.com/neghi14/starter/internal/parser"
 	"github.com/neghi14/starter/utils"
 	"github.com/redis/go-redis/v9"
 )
@@ -17,7 +17,7 @@ type redisConf struct {
 	connection_url string
 	ttl            int64
 	table          string
-	parser         parser.Parser
+	parser         starter.Parser
 }
 
 func Opts() *redisConf {
@@ -188,11 +188,11 @@ func createKey(prefix string) string {
 	return prefix + ":" + utils.Generate(12)
 }
 
-func getRedisSearchKeyType(parserType parser.ParserValueType) redis.SearchFieldType {
+func getRedisSearchKeyType(parserType starter.ParserValueType) redis.SearchFieldType {
 	switch parserType {
-	case parser.Num:
+	case starter.Num:
 		return redis.SearchFieldTypeNumeric
-	case parser.Text:
+	case starter.Text:
 		return redis.SearchFieldTypeText
 	default:
 		return redis.SearchFieldTypeInvalid

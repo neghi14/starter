@@ -1,4 +1,4 @@
-package parser
+package starter
 
 import (
 	"errors"
@@ -12,22 +12,6 @@ import (
 
 var parser *sync.Once
 var parser_instance *Parser
-
-type ParserValueType int
-
-const (
-	Num ParserValueType = iota
-	Text
-)
-
-var parserValueTypeMap = map[ParserValueType]string{
-	Num:  "Num",
-	Text: "Text",
-}
-
-func (p ParserValueType) String() string {
-	return parserValueTypeMap[p]
-}
 
 // Supported Tags
 const (
@@ -212,7 +196,3 @@ func (m *Parser) ConvertFromBson(data bson.D) (M, error) {
 	}
 	return res, nil
 }
-
-// func (m *Parser) getAttr() error {
-// 	return nil
-// }
