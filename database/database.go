@@ -1,6 +1,8 @@
 package database
 
-import "context"
+import (
+	"context"
+)
 
 // db.model().find({"id": "sdfsg"}).one().many().limit(1).column("email", "name").sort("created_at", asc).skip(10).exec()
 // db.model().save().exec()
@@ -8,10 +10,10 @@ import "context"
 // db.model().delete({"id": "dsfgk"}).one().many().exec()
 
 type Model[T any] interface {
-	Find() Find[T]
-	Save() ISave[T]
-	Update() Update[T]
-	Delete() Delete[T]
+	Find(filter ...Args) Find[T]
+	Save(body T) ISave
+	Update(filter ...Args) Update
+	Delete(filter ...Args) Delete
 }
 
 type Find[T any] interface {
@@ -19,91 +21,96 @@ type Find[T any] interface {
 	Many() IFindMany[T]
 }
 
-type Update[T any] interface {
-	One() IUpdateOne[T]
-	Many() IUpdateMany[T]
+type Update interface {
+	One() IUpdateOne
+	Many() IUpdateMany
 }
 
-type Delete[T any] interface {
-	One() IDeleteOne[T]
-	Many() IDeleteMany[T]
+type Delete interface {
+	One() IDeleteOne
+	Many() IDeleteMany
 }
 
 type IFindOne[T any] interface {
-	Sort(sort ...string) IFindOne[T]
-	Column(column ...string) IFindOne[T]
-	Exec[T]
+	Sort(sort ...Args) IFindOne[T]
+	Column(column ...Args) IFindOne[T]
+	Exec(ctx context.Context) (T, error)
 }
 
 type IFindMany[T any] interface {
-	Sort(sort ...string) IFindMany[T]
+	Sort(sort ...Args) IFindMany[T]
 	Limit(limit int64) IFindMany[T]
-	Column(column ...string) IFindMany[T]
+	Column(column ...Args) IFindMany[T]
 	Skip(skip int64) IFindMany[T]
-	Exec[T]
+	Exec(ctx context.Context) ([]T, error)
 }
 
-type ISave[T any] interface {
-	Exec[T]
+type ISave interface {
+	Exec(ctx context.Context) error
 }
 
-type IUpdateOne[T any] interface {
-	Exec[T]
+type IUpdateOne interface {
+	Exec(ctx context.Context) error
 }
 
-type IUpdateMany[T any] interface {
-	Exec[T]
+type IUpdateMany interface {
+	Exec(ctx context.Context) error
 }
 
-type IDeleteOne[T any] interface {
-	Exec[T]
+type IDeleteOne interface {
+	Exec(ctx context.Context) error
 }
 
-type IDeleteMany[T any] interface {
-	Exec[T]
+type IDeleteMany interface {
+	Exec(ctx context.Context) error
 }
 
-type Exec[T any] interface {
-	Exec(ctx context.Context) (*T, error)
+type Args struct {
+	key   string
+	value interface{}
 }
 
-type Filter struct {
-	Param []Param
-	Skip  int64
-	Limit int64
-	Sort  Param
+type SortKey int
+
+const (
+	ASC SortKey = iota
+	DESC
+)
+
+var sortKeyMap = map[SortKey]string{
+	ASC:  "asc",
+	DESC: "desc",
 }
 
-type Param struct {
-	Key   string
-	Value interface{}
+// func SortKey(key string, value sortKey) Args {
+// 	a := Args{key: key, value: value}
+// 	return a
+// }
+
+func (s SortKey) String() string {
+	return sortKeyMap[s]
 }
 
-func Opts() *Filter {
-	return &Filter{
-		Sort: Param{
-			Key:   "_id",
-			Value: 1,
-		},
-	}
+func (a Args) String(key, value string) Args {
+	a.key = key
+	a.value = value
+	return a
+}
+func (a Args) Int(key string, value int) Args {
+	a.key = key
+	a.value = value
+	return a
 }
 
-func (f *Filter) Params(param ...Param) *Filter {
-	f.Param = append(f.Param, param...)
-	return f
+func (a Args) Sort(key string, value SortKey) Args {
+	a.key = key
+	a.value = value
+	return a
 }
 
-func (f *Filter) SortBy(sort Param) *Filter {
-	f.Sort = sort
-	return f
+func (a *Args) Key() string {
+	return a.key
 }
-
-func (f *Filter) LimitBy(value int64) *Filter {
-	f.Limit = value
-	return f
-}
-
-func (f *Filter) SkipBy(value int64) *Filter {
-	f.Skip = value
-	return f
+func (a *Args) Value() interface{} {
+	return a.value
 }

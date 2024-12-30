@@ -32,17 +32,50 @@ type model struct {
 	fieldTag   string
 }
 
+// E represents an entity with a key-value pair and a type.
+//
+// Fields:
+//
+//	Key   - A string that acts as the identifier or name for the entity.
+//	Value - A value associated with the key, which can be of any type (interface{}).
+//	Type  - The type of the value, represented by the ParserValueType enum or type.
+//
+// Example Usage:
+//
+//	e := E{
+//	    Key:   "example",
+//	    Value: 42,
+//	    Type:  ParserValueTypeNum,
+//	}
+//
+//	fmt.Printf("Key: %s, Value: %v, Type: %v\n", e.Key, e.Value, e.Type)
 type E struct {
 	Key   string
 	Value interface{}
 	Type  ParserValueType
 }
 
+// M represents an entity that is a slice of E.
+//
+// Example Usage:
+//
+//	m := M
+//	e := E{
+//	    Key:   "example",
+//	    Value: 42,
+//	    Type:  ParserValueTypeNum,
+//	}
+//	m = append(m, e)
+//	fmt.Printf(m)
 type M []E
 
+// Parser represents the parser entity
 type Parser struct{}
 
-func New() *Parser {
+// NewParser instantiate a Parser entity.
+// It is goroutine safe as it uses the [sync] package to ensure
+// only one instance of itself is every created.
+func NewParser() *Parser {
 	parser.Do(func() {
 		parser_instance = &Parser{}
 	})
